@@ -22,34 +22,67 @@ import           Database.Persist.TH  (mkMigrate, mkPersist, persistLowerCase,
 import           GHC.Generics         (Generic)
 
 import           Config
+import           Data.Time
+import           Data.Text            (Text)
+
+import           OrganizationRole
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User json
-    name String
-    email String
+    name Text
+    email Text
+    UniqueEmail email
+    password Text
     deriving Show
 
-Post json
-    title String
-    body String
-    authorId UserId
+Organization json
+    name Text
+    deriving Show
+
+OrganizationUser
+    userId UserId
+    organizationId OrganizationId
+    role  OrganizationRole
+
+Animal json
+    name Text
+    organizationId OrganizationId
+    yardId         YardId Maybe
+    deriving Show
+
+Yard json
+    name Text
+    organizationId OrganizationId
+    deriving Show
+
+YardEvent json
+    animalId AnimalId
+    yardId   YardId
+    entryDTS UTCTime default=now()
+    exitDTS  UTCTime Maybe
+    deriving Show
+
+AnimalRelationship json
+    animalIdA AnimalId
+    animalIdB AnimalId
+    strength  Int
     deriving Show
 |]
 
-data PublicPost =
-  PublicPost
-  { id :: PostId
-  , title :: String
-  , body  :: String
-  } deriving (Eq, Show, Generic)
+-- data PublicPost =
+--   PublicPost
+--   { id :: PostId
+--   , title :: String
+--   , body  :: String
+--   } deriving (Eq, Show, Generic)
 
-postToPublicPost :: PostId -> Post -> PublicPost
-postToPublicPost pid Post{..} =
-  PublicPost { title = postTitle, body = postBody, id = pid }
+-- postToPublicPost :: PostId -> Post -> PublicPost
+-- postToPublicPost pid Post{..} =
+--   PublicPost { title = postTitle, body = postBody, id = pid }
 
-instance ToJSON PublicPost where
+-- instance ToJSON PublicPost where
 
-instance FromJSON PublicPost where
+-- instance FromJSON PublicPost where
 
 doMigrations :: SqlPersistT IO ()
 doMigrations = runMigration migrateAll

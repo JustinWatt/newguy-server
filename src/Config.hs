@@ -9,8 +9,10 @@ import           Control.Monad.Logger                 (runNoLoggingT,
                                                        runStdoutLoggingT)
 import           Control.Monad.Reader                 (MonadIO, MonadReader,
                                                        ReaderT)
+import           Control.Monad.IO.Class               (liftIO)
 import           Control.Monad.Trans.Maybe            (MaybeT (..), runMaybeT)
 import qualified Data.ByteString.Char8                as BS
+import           Data.Text                            (Text)
 import           Data.Monoid                          ((<>))
 import           Database.Persist.Postgresql          (ConnectionPool,
                                                        ConnectionString,
@@ -19,6 +21,7 @@ import           Network.Wai                          (Middleware)
 import           Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import           Servant                              (ServantErr)
 import           System.Environment                   (lookupEnv)
+import           Web.JWT                              (Secret, secret)
 
 -- | This type represents the effects we want to have for our application.
 -- We wrap the standard Servant monad with 'ReaderT Config', which gives us
@@ -39,6 +42,7 @@ data Config
     = Config
     { getPool :: ConnectionPool
     , getEnv  :: Environment
+    , getSecret :: Secret
     }
 
 -- | Right now, we're distinguishing between three environments. We could
@@ -62,7 +66,7 @@ setLogger Production = logStdout
 -- deployment application.
 makePool :: Environment -> IO ConnectionPool
 makePool Test =
-    runNoLoggingT (createPostgresqlPool (connStr "test") (envPool Test))
+     runNoLoggingT (createPostgresqlPool (connStr "test") (envPool Test))
 makePool Development =
     runStdoutLoggingT (createPostgresqlPool (connStr "") (envPool Development))
 makePool Production = do

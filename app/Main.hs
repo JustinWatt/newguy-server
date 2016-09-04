@@ -11,6 +11,8 @@ import           Config                      (Config (..), Environment (..),
 import           Models                      (doMigrations)
 import           Safe                        (readMay)
 
+import Web.JWT (secret)
+
 
 -- | The 'main' function gathers the required environment information and
 -- initializes the application.
@@ -19,7 +21,7 @@ main = do
     env  <- lookupSetting "ENV" Development
     port <- lookupSetting "PORT" 8081
     pool <- makePool env
-    let cfg = Config { getPool = pool, getEnv = env }
+    let cfg = Config { getPool = pool, getEnv = env, getSecret = secret "secret" }
         logger = setLogger env
     runSqlPool doMigrations pool
     generateJavaScript
