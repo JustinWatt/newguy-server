@@ -44,8 +44,12 @@ registerUser reg = do
     Left registrationError -> do
       throwError err400
     Right user -> do
-      newUser <- runDb $ insert user
-      return $ fromSqlKey newUser
+      newUser <- runDb $ E.insertBy user
+      case newUser of
+        Left _ ->
+          throwError err403
+        Right key ->
+          return $ fromSqlKey key
 
 -- | Returns all users in the database.
 allUsers :: App [Entity User]
