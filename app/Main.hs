@@ -1,5 +1,6 @@
 module Main where
 
+import           Data.Text                   (pack)
 import           Database.Persist.Postgresql (runSqlPool)
 import           Network.Wai.Handler.Warp    (run)
 import           System.Environment          (lookupEnv)
@@ -11,7 +12,7 @@ import           Config                      (Config (..), Environment (..),
 import           Models                      (doMigrations)
 import           Safe                        (readMay)
 
-import Web.JWT (secret)
+import           Web.JWT                     (secret)
 
 
 -- | The 'main' function gathers the required environment information and
@@ -20,8 +21,9 @@ main :: IO ()
 main = do
     env  <- lookupSetting "ENV" Development
     port <- lookupSetting "PORT" 8081
+    jwtSecret <- lookupSetting "JWTSECRET" "secret"
     pool <- makePool env
-    let cfg = Config { getPool = pool, getEnv = env, getSecret = secret "secret" }
+    let cfg = Config { getPool = pool, getEnv = env, getSecret = secret $ pack jwtSecret }
         logger = setLogger env
     runSqlPool doMigrations pool
     generateJavaScript

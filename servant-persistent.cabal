@@ -29,6 +29,9 @@ executable perservant
       , warp
       , monad-logger
       , safe
+      , text
+      , jwt
+
     hs-source-dirs:
         app   
     default-language:
@@ -45,12 +48,15 @@ library
       , Api
       , Api.User
       , Api.Login
+      , Auth
       , OrganizationRole
     build-depends: 
         base >= 4.7 && < 4.9
       , aeson
       , bytestring
+      , email-validate
       , containers
+      , either >= 4.4.1.1
       , esqueleto
       , jwt >= 0.7.2
       , monad-control
@@ -59,6 +65,7 @@ library
       , persistent
       , persistent-postgresql
       , persistent-template
+      , pwstore-fast
       , servant >= 0.7 && < 0.8
       , servant-js >= 0.7 && < 0.8
       , servant-server >= 0.7 && < 0.8

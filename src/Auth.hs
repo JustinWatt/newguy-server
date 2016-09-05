@@ -18,23 +18,6 @@ import           Web.JWT
 import           Data.Map as M
 import           Database.Persist.Postgresql      (fromSqlKey)
 
-newtype Email =
-  Email T.Text
-  deriving (Eq, Show, Generic, FromJSON)
-
-newtype Password =
-  Password T.Text
-  deriving (Eq, Show, Generic, FromJSON)
-
-data Login =
-  Login
-  { email     :: Email
-  , password  :: Password
-  } deriving (Show, Eq, Generic)
-
-instance FromJSON Login where
-
-
 data Credentials =
   Credentials
   { token :: T.Text

@@ -23,19 +23,29 @@ import           Config                           (App (..), Config (..))
 import           Models
 import           OrganizationRole as OR
 import           Auth
+import           Api.Login
 
 type UserAPI =
-         Get '[JSON] [Entity User]
-    :<|> Capture "name" Text :> Get '[JSON] (Entity User)
-    :<|> ReqBody '[JSON] User :> Servant.Post '[JSON] Int64
+       "signup" :> ReqBody '[JSON] Registration :> Post '[JSON] Int64
+  :<|> "login" :> ReqBody '[JSON] Login :> Post '[JSON] Credentials
 
 -- | The server that runs the UserAPI
 userServer :: ServerT UserAPI App
 userServer =
-       allUsers
-  :<|> singleUser
-  :<|> createUser
+       registerUser
+  :<|> login
 
+registerUser :: Registration -> App Int64
+registerUser reg = do
+
+  registeredUser <- liftIO $ registrationToUser reg
+
+  case registeredUser of
+    Left registrationError -> do
+      throwError err400
+    Right user -> do
+      newUser <- runDb $ insert user
+      return $ fromSqlKey newUser
 
 -- | Returns all users in the database.
 allUsers :: App [Entity User]
@@ -52,14 +62,8 @@ singleUser str = do
          Just person ->
             return person
 
--- | Creates a user in the database.
-createUser :: User -> App Int64
-createUser u = do
-    newUser <- runDb $ insert u
-    return $ fromSqlKey newUser
-
---
-type OrganizationAPI = Get '[JSON] [Entity Organization]
+type OrganizationAPI =
+       Get '[JSON] [Entity Organization]
   :<|> Capture "userId" UserId :> ReqBody '[JSON] Organization :> Servant.Post '[JSON] Int64
 
 organizationServer :: ServerT OrganizationAPI App

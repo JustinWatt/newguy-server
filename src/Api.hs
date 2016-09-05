@@ -21,7 +21,7 @@ import           Api.Login                   (LoginAPI)
 
 
 type NewGuyAPI =
-       "users" :> UserAPI
+       UserAPI
   :<|> "organizations" :> OrganizationAPI
 
 server :: ServerT NewGuyAPI App
