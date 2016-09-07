@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeOperators    #-}
 {-# LANGUAGE OverloadedStrings  #-}
@@ -9,8 +10,22 @@ module Api.User where
 import           Control.Monad.Except
 import           Control.Monad.Reader             (ReaderT, runReaderT)
 import           Control.Monad.Reader.Class
+
+import           GHC.Generics (Generic)
+
+import           Data.Aeson                       (FromJSON, ToJSON, (.=), toJSON, object,
+                                                  (.:), parseJSON, Value(Object))
+
+import           Data.String.Conversions          (cs)
+import           Data.ByteString.Lazy.Char8       (ByteString)
+import qualified Data.ByteString.Internal as BS
+
 import           Data.Int                         (Int64)
+
 import           Data.Text                        (Text)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+
 import           Database.Persist.Postgresql      (Entity (..), fromSqlKey, insert,
                                                   selectFirst, selectList, (==.))
 import           Network.Wai                      (Application)
@@ -23,11 +38,13 @@ import           Config                           (App (..), Config (..))
 import           Models
 import           OrganizationRole as OR
 import           Auth
-import           Api.Login
+
+import           Text.Email.Validate
+import           Crypto.PasswordStore
 
 type UserAPI =
        "signup" :> ReqBody '[JSON] Registration :> Post '[JSON] Int64
-  :<|> "login" :> ReqBody '[JSON] Login :> Post '[JSON] Credentials
+  :<|> "login"  :> ReqBody '[JSON] Login :> Post '[JSON] Credentials
 
 -- | The server that runs the UserAPI
 userServer :: ServerT UserAPI App
@@ -41,13 +58,13 @@ registerUser reg = do
   registeredUser <- liftIO $ registrationToUser reg
 
   case registeredUser of
-    Left registrationError -> do
-      throwError err400
+    Left registrationError ->
+      throwError $ err400 { errBody = cs $ show registrationError  }
     Right user -> do
       newUser <- runDb $ E.insertBy user
       case newUser of
         Left _ ->
-          throwError err403
+          throwError err400 { errBody = "Email in Use" :: ByteString}
         Right key ->
           return $ fromSqlKey key
 
@@ -66,24 +83,94 @@ singleUser str = do
          Just person ->
             return person
 
-type OrganizationAPI =
-       Get '[JSON] [Entity Organization]
-  :<|> Capture "userId" UserId :> ReqBody '[JSON] Organization :> Servant.Post '[JSON] Int64
+data Login =
+  Login
+  { email     :: Text
+  , password  :: Text
+  } deriving (Show, Eq, Generic)
 
-organizationServer :: ServerT OrganizationAPI App
-organizationServer =
-       allOrganizations
-  :<|> createOrganization
+instance FromJSON Login where
 
-allOrganizations :: App [Entity Organization]
-allOrganizations =
-  runDb (selectList [] [])
+login :: Login -> App Credentials
+login (Login e pw) = do
+    maybeUser <- runDb (selectFirst [UserEmail ==. e] [])
 
-createOrganization :: UserId -> Organization -> App Int64
-createOrganization uID org = runDb $ do
-  newOrg <- insert $ Organization (organizationName org)
-  insert $ OrganizationUser uID newOrg OR.Admin
-  return $ fromSqlKey newOrg
+    case maybeUser of
+      Nothing ->
+        throwError err403
+
+      Just (Entity uID (User _ _ phash)) ->
+        if verifyPassword (T.encodeUtf8 pw) (T.encodeUtf8 phash) then do
+          secret <- asks getSecret
+          return $ createToken secret uID
+        else
+         throwError err403
+
+data Registration =
+  Registration
+  { regName     :: Text
+  , regEmail    :: Text
+  , regPassword :: Text
+  , regPasswordConfirm :: Text
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON Registration where
+  parseJSON (Object v) =
+    Registration <$>
+    v .: "name" <*>
+    v .: "email" <*>
+    v .: "password" <*>
+    v .: "passwordConfirm"
+
+  parseJSON _ = Prelude.mempty
+
+data RegistrationError =
+    PasswordsDontMatch
+  | InvalidEmailAddress ByteString String
+  | NameEmpty Text
+  deriving (Eq, Show)
+
+validatePassword :: Text -> Text -> Either RegistrationError Text
+validatePassword pWord pWordConfirm =
+  if pWord /= pWordConfirm then
+    Left PasswordsDontMatch
+  else
+    Right pWord
+
+validateEmail :: BS.ByteString -> Either RegistrationError Text
+validateEmail bs =
+  case validate bs of
+    Left  errStr -> Left $ InvalidEmailAddress (cs bs) errStr 
+    Right email -> Right (cs (toByteString email))
+
+validateName :: Text -> Either RegistrationError Text
+validateName n =
+  if T.strip n /= "" then
+    Right (T.strip n)
+  else
+    Left $ NameEmpty n
+
+encryptPassword :: Text -> IO Text
+encryptPassword plainPassword = do
+  ep <- makePassword (cs plainPassword) 17
+  return $ cs ep
+
+validateRegistration :: Registration -> Either RegistrationError Registration
+validateRegistration reg@Registration{..} = do
+  emailE    <- validateEmail (T.encodeUtf8 regEmail)
+  passwordE <- validatePassword regPassword regPasswordConfirm
+  nameE     <- validateName regName
+
+  return reg
+
+registrationToUser :: Registration -> IO (Either RegistrationError User)
+registrationToUser reg =
+  case validateRegistration reg of
+    Left err ->
+      return $ Left err
+    Right Registration{..} -> do
+      ep <- encryptPassword regPassword
+      return $ Right $ User regName regEmail ep
 
 
 -- allUserPosts :: UserId -> App [PublicPost]

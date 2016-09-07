@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators              #-}
 
 module Api (app) where
@@ -16,23 +15,24 @@ import           Servant
 import           Config                      (App (..), Config (..))
 import           Models
 
-import           Api.User                    (UserAPI, OrganizationAPI, organizationServer, userServer)
-import           Api.Login                   (LoginAPI)
+import           Api.User                    (UserAPI, userServer)
+import           Api.Organization            (OrganizationAPI, organizationServer)
+import           Auth
 
 
 type NewGuyAPI =
        UserAPI
-  :<|> "organizations" :> OrganizationAPI
+  :<|> OrganizationAPI
 
 server :: ServerT NewGuyAPI App
 server = userServer
-  :<|> organizationServer
+   :<|>  organizationServer
 
 -- | This is the function we export to run our 'UserAPI'. Given
 -- a 'Config', we return a WAI 'Application' which any WAI compliant server
 -- can run.
 userApp :: Config -> Application
-userApp cfg = serve (Proxy :: Proxy NewGuyAPI) (appToServer cfg)
+userApp cfg = serveWithContext (Proxy :: Proxy NewGuyAPI) (genAuthContext cfg) (appToServer cfg)
 
 -- | This functions tells Servant how to run the 'App' monad with our
 -- 'server' function.
@@ -67,4 +67,4 @@ appApi = Proxy
 -- alongside the 'Raw' endpoint that serves all of our files.
 app :: Config -> Application
 app cfg =
-    serve appApi (appToServer cfg :<|> files)
+    serveWithContext appApi (genAuthContext cfg) (appToServer cfg :<|> files)

@@ -27,6 +27,7 @@ main = do
         logger = setLogger env
     runSqlPool doMigrations pool
     generateJavaScript
+    putStrLn $ "Newguy API! Port: " ++ show port
     run port $ logger $ app cfg
 
 -- | Looks up a setting in the environment, with a provided default, and

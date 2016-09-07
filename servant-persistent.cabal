@@ -47,7 +47,7 @@ library
       , Models
       , Api
       , Api.User
-      , Api.Login
+      , Api.Organization
       , Auth
       , OrganizationRole
     build-depends: 
@@ -66,9 +66,10 @@ library
       , persistent-postgresql
       , persistent-template
       , pwstore-fast
-      , servant >= 0.7 && < 0.8
-      , servant-js >= 0.7 && < 0.8
-      , servant-server >= 0.7 && < 0.8
+      , servant >= 0.8 && <= 0.9
+      , servant-js >= 0.8 && < 0.9
+      , servant-server >= 0.8 && < 0.9
+      , string-conversions
       , transformers
       , text
       , time

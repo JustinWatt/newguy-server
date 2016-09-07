@@ -1,6 +1,17 @@
-flags:
-  servant-persistent: {}
+flags: {}
 packages:
 - '.'
-extra-deps: []
+extra-deps:
+- aeson-0.11.2.1
+- bytestring-builder-0.10.8.1.0
+- conduit-extra-1.1.13.2
+- postgresql-libpq-0.9.2.0
+- postgresql-simple-0.5.2.1
+- servant-0.8.1
+- servant-foreign-0.8.1
+- servant-js-0.8.1
+- servant-server-0.8.1
+- unix-time-0.3.7
+- wai-extra-3.0.17
+- warp-3.2.8
 resolver: lts-6.4
