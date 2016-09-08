@@ -43,7 +43,7 @@ import           Text.Email.Validate
 import           Crypto.PasswordStore
 
 type UserAPI =
-       "signup" :> ReqBody '[JSON] Registration :> Post '[JSON] Int64
+       "signup" :> ReqBody '[JSON] Registration :> PostCreated '[JSON] Int64
   :<|> "login"  :> ReqBody '[JSON] Login :> Post '[JSON] Credentials
 
 -- | The server that runs the UserAPI
@@ -59,7 +59,7 @@ registerUser reg = do
 
   case registeredUser of
     Left registrationError ->
-      throwError $ err400 { errBody = cs $ show registrationError  }
+      throwError $ err400 { errBody = cs $ show registrationError }
     Right user -> do
       newUser <- runDb $ E.insertBy user
       case newUser of

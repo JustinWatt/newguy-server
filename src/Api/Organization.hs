@@ -17,27 +17,49 @@ import           Config                           (App (..), Config (..))
 import           Servant
 import           Auth                             (Claims(..))
 
-type OrganizationAPI =
-        "organizations" :> AuthProtect "jwt" :> Get '[JSON] [Entity Organization]
-  :<|>  "organizations" :> AuthProtect "jwt" :> ReqBody '[JSON] Organization :> Post '[JSON] Int64
+type OrganizationAPI = "organizations" :> (
+        AuthProtect "jwt" :> Get '[JSON] [Entity Organization]
+   :<|> AuthProtect "jwt" :> ReqBody '[JSON] Organization :> PostCreated '[JSON] Int64
+   :<|> AuthProtect "jwt" :> Capture "organizationId" OrganizationId :> "animals" :> Get '[JSON] [Entity Animal]
+--   :<|> AuthProtect "jwt" :> Capture "organizationId" OrganizationId :> "users" :> Get '[JSON] [Entity User]
+   )
 
 organizationServer :: ServerT OrganizationAPI App
 organizationServer =
        allOrganizations
   :<|> createOrganization
+  :<|> organizationAnimals
+
+organizationMembers :: Claims -> OrganizationId -> App [Entity User]
+organizationMembers (Claims uID) oID = undefined
+  -- runDb $
+  --   E.select $
+  --   E.from $ \(user `E.InnerJoin` orgUser) -> do
+  --   E.on  (user E.^. UserId E.==. orgUser E.^. OrganizationUserUserId)
+  --   E.where_ $ E.val uID E.==. (orgUser E.^. OrganizationUserOrganizationId)
+  --   return user
+
+organizationAnimals :: Claims -> OrganizationId -> App [Entity Animal]
+organizationAnimals (Claims uID) oID =
+  runDb $
+    E.select $
+    E.from $ \(animal `E.InnerJoin` orgUser) -> do
+    E.on  (animal E.^. AnimalOrganizationId E.==. orgUser E.^. OrganizationUserOrganizationId)
+    E.where_ $ E.val uID E.==. (orgUser E.^. OrganizationUserUserId)
+    E.where_ $ E.val oID E.==. (orgUser E.^. OrganizationUserOrganizationId)
+    return animal
 
 allOrganizations :: Claims -> App [Entity Organization]
-allOrganizations (Claims uID) = do
-  orgs <- runDb $
+allOrganizations (Claims uID) =
+  runDb $
     E.select $
     E.from $ \(org `E.InnerJoin` orgUser) -> do
     E.on (org E.^. OrganizationId E.==. orgUser E.^. OrganizationUserOrganizationId)
     E.where_ $ E.val uID E.==. (orgUser E.^. OrganizationUserUserId)
     return org
-  return orgs
 
 createOrganization :: Claims -> Organization -> App Int64
-createOrganization c org = runDb $ do
+createOrganization (Claims uID) org = runDb $ do
   newOrg <- insert $ Organization (organizationName org)
-  insert $ OrganizationUser (userID c) newOrg Admin
+  insert $ OrganizationUser uID newOrg Admin
   return $ fromSqlKey newOrg
