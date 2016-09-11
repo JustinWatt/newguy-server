@@ -47,6 +47,7 @@ OrganizationUser
     userId UserId
     organizationId OrganizationId
     role  OrganizationRole
+    accepted Bool
 
 Animal json
     name Text
