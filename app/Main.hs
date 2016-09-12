@@ -6,7 +6,6 @@ import           Network.Wai.Handler.Warp    (run)
 import           System.Environment          (lookupEnv)
 
 import           Api                         (app)
-import           Api.User                    (generateJavaScript)
 import           Config                      (Config (..), Environment (..),
                                               makePool, setLogger)
 import           Models                      (doMigrations)
@@ -26,7 +25,6 @@ main = do
     let cfg = Config { getPool = pool, getEnv = env, getSecret = secret $ pack jwtSecret }
         logger = setLogger env
     runSqlPool doMigrations pool
-    generateJavaScript
     putStrLn $ "Newguy API! Port: " ++ show port
     run port $ logger $ app cfg
 
