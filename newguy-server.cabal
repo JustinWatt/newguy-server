@@ -1,12 +1,12 @@
-name:                servant-persistent
+name:                newguy-server
 version:             0.2.0.0
 synopsis:            Brief example on using persistent with servant
 description:         Brief example on using persistent with servant
 license:             MIT
 license-file:        LICENSE
-author:              Matt Parsons
-maintainer:          parsonsmatt@gmail.com
-copyright:           2016 Matt Parsons
+author:              Justin Watt
+maintainer:          justinwatt@gmail.com
+copyright:           2016 Justin Watt
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.18
@@ -15,15 +15,15 @@ source-repository head
     type:
         git
     location:
-        https://www.github.com/parsonsmatt/servant-persistent
+        https://www.github.com/justinwatt/newguy-server
 
-executable perservant
+executable newguy-server
     main-is:
         Main.hs
     build-depends:
         base >=4.7 && <4.9
       , containers
-      , servant-persistent 
+      , newguy-server 
       , persistent-postgresql
       , wai
       , warp
@@ -80,7 +80,7 @@ library
       , warp
 
 
-test-suite servant-persistent-test
+test-suite newguy-server-test
     type:
         exitcode-stdio-1.0
     hs-source-dirs:

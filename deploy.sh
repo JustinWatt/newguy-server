@@ -1,12 +1,12 @@
 #! /bin/bash
 
 set -e
-echo "Building Perservant..."
+echo "Building newguy-server..."
 stack build
-strip `stack exec -- which perservant`
+strip `stack exec -- which newguy-server`
 echo "Creating bundle..."
-cp `stack exec -- which perservant` perservant
-tar -czvf perservant.keter perservant config ql-ui/assets
-rm perservant
-# scp ./perservant.keter user@host:/opt/keter/incoming/perservant.keter
-rm perservant.keter
+cp `stack exec -- which newguy-server` newguy-server
+tar -czvf newguy-server.keter newguy-server config ql-ui/assets
+rm newguy-server
+# scp ./newguy-server.keter user@host:/opt/keter/incoming/newguy-server.keter
+rm newguy-server.keter
