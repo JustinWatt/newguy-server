@@ -8,7 +8,6 @@
 module Api.User where
 
 import           Control.Monad.Except
-import           Control.Monad.Reader             (ReaderT, runReaderT)
 import           Control.Monad.Reader.Class
 
 import           GHC.Generics (Generic)
@@ -22,21 +21,17 @@ import qualified Data.ByteString.Internal as BS
 
 import           Data.Int                         (Int64)
 
-import           Data.Text                        (Text)
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
+import           Data.Text                        (Text, strip)
 
 import           Database.Persist.Postgresql      (Entity (..), fromSqlKey, insert,
                                                   selectFirst, selectList, (==.))
 import           Network.Wai                      (Application)
 import           Servant
 
-import           Servant.JS                       (vanillaJS, writeJSForAPI)
 import qualified Database.Esqueleto as E
 
 import           Config                           (App (..), Config (..))
 import           Models
-import           OrganizationRole as OR
 import           Auth
 
 import           Text.Email.Validate
@@ -100,7 +95,7 @@ login (Login e pw) = do
         throwError err403
 
       Just (Entity uID (User _ _ phash)) ->
-        if verifyPassword (T.encodeUtf8 pw) (T.encodeUtf8 phash) then do
+        if verifyPassword (cs pw) (cs phash) then do
           secret <- asks getSecret
           return $ createToken secret uID
         else
@@ -140,15 +135,17 @@ validatePassword pWord pWordConfirm =
 validateEmail :: BS.ByteString -> Either RegistrationError Text
 validateEmail bs =
   case validate bs of
-    Left  errStr -> Left $ InvalidEmailAddress (cs bs) errStr 
-    Right email -> Right (cs (toByteString email))
+    Left  errStr -> Left $ InvalidEmailAddress (cs bs) errStr
+    Right email -> Right $ cs (toByteString email)
 
 validateName :: Text -> Either RegistrationError Text
 validateName n =
-  if T.strip n /= "" then
-    Right (T.strip n)
+  if strippedName /= "" then
+    Right strippedName
   else
     Left $ NameEmpty n
+
+  where strippedName = strip n
 
 encryptPassword :: Text -> IO Text
 encryptPassword plainPassword = do
@@ -157,7 +154,7 @@ encryptPassword plainPassword = do
 
 validateRegistration :: Registration -> Either RegistrationError Registration
 validateRegistration reg@Registration{..} = do
-  emailE    <- validateEmail (T.encodeUtf8 regEmail)
+  emailE    <- validateEmail $ cs regEmail
   passwordE <- validatePassword regPassword regPasswordConfirm
   nameE     <- validateName regName
 
@@ -190,11 +187,5 @@ registrationToUser reg =
 --     else do
 --       newPost <- runDb $ insert $ Models.Post (postTitle p) (postBody p) (postAuthorId p)
 --       return $ fromSqlKey newPost
-
-
--- | Generates JavaScript to query the User API.
-generateJavaScript :: IO ()
-generateJavaScript =
-    writeJSForAPI (Proxy :: Proxy UserAPI) vanillaJS "./assets/api.js"
 
 
