@@ -7,7 +7,7 @@ import           System.Environment          (lookupEnv)
 
 import           Api                         (app)
 import           Config                      (Config (..), Environment (..),
-                                              makePool, setLogger)
+                                              makePool, setLogger, corsPolicy)
 import           Models                      (doMigrations)
 import           Safe                        (readMay)
 
@@ -24,9 +24,10 @@ main = do
     pool <- makePool env
     let cfg = Config { getPool = pool, getEnv = env, getSecret = secret $ pack jwtSecret }
         logger = setLogger env
+        cors = corsPolicy env
     runSqlPool doMigrations pool
     putStrLn $ "Newguy API! Port: " ++ show port
-    run port $ logger $ app cfg
+    run port $ logger $ cors $ app cfg
 
 -- | Looks up a setting in the environment, with a provided default, and
 -- 'read's that information into the inferred type.

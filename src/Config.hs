@@ -18,6 +18,7 @@ import           Database.Persist.Postgresql          (ConnectionPool,
                                                        ConnectionString,
                                                        createPostgresqlPool)
 import           Network.Wai                          (Middleware)
+import           Network.Wai.Middleware.Cors
 import           Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import           Servant                              (ServantErr)
 import           System.Environment                   (lookupEnv)
@@ -106,6 +107,13 @@ envPool :: Environment -> Int
 envPool Test = 1
 envPool Development = 1
 envPool Production = 8
+
+corsPolicy :: Environment -> Middleware
+corsPolicy _ = cors (const $ Just policy)
+  where
+    policy = simpleCorsResourcePolicy
+      { corsRequestHeaders = ["Content-Type"] }
+
 
 -- | A basic 'ConnectionString' for local/test development. Pass in either
 -- @""@ for 'Development' or @"test"@ for 'Test'.
