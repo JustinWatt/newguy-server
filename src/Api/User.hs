@@ -12,8 +12,8 @@ import           Control.Monad.Reader.Class
 
 import           GHC.Generics (Generic)
 
-import           Data.Aeson                       (FromJSON, ToJSON, (.=), toJSON, object,
-                                                  (.:), parseJSON, Value(Object))
+import           Data.Aeson
+import           Data.Aeson.TH
 
 import           Data.String.Conversions          (cs)
 import           Data.ByteString.Lazy.Char8       (ByteString)
@@ -22,6 +22,7 @@ import qualified Data.ByteString.Internal as BS
 import           Data.Int                         (Int64)
 
 import           Data.Text                        (Text, strip)
+import           Data.Char                        (toLower)
 
 import           Database.Persist.Postgresql      (Entity (..), fromSqlKey, insert,
                                                   selectFirst, selectList, (==.))
@@ -63,15 +64,10 @@ registerUser reg = do
         Right key ->
           return $ fromSqlKey key
 
--- | Returns all users in the database.
-allUsers :: App [Entity User]
-allUsers =
-    runDb (selectList [] [])
-
--- | Returns a user by name or throws a 404 error.
+-- | Returns a user by email or throws a 404 error.
 singleUser :: Text -> App (Entity User)
 singleUser str = do
-    maybeUser <- runDb (selectFirst [UserName ==. (str :: Text)] [])
+    maybeUser <- runDb (selectFirst [UserEmail ==. (str :: Text)] [])
     case maybeUser of
          Nothing ->
             throwError err404
@@ -85,6 +81,13 @@ data Login =
   } deriving (Show, Eq, Generic)
 
 instance FromJSON Login where
+  parseJSON =
+    genericParseJSON defaultOptions
+    { fieldLabelModifier = map toLower
+    , constructorTagModifier = map toLower
+    }
+
+instance ToJSON Login where
 
 login :: Login -> App Credentials
 login (Login e pw) = do
@@ -101,23 +104,24 @@ login (Login e pw) = do
         else
          throwError err403
 
+
+
 data Registration =
   Registration
-  { regName     :: Text
-  , regEmail    :: Text
-  , regPassword :: Text
-  , regPasswordConfirm :: Text
+  { email    :: Text
+  , password :: Text
+  , passwordConfirm :: Text
   } deriving (Eq, Show, Generic)
 
-instance FromJSON Registration where
-  parseJSON (Object v) =
-    Registration <$>
-    v .: "name" <*>
-    v .: "email" <*>
-    v .: "password" <*>
-    v .: "passwordConfirm"
 
-  parseJSON _ = Prelude.mempty
+instance FromJSON Registration where
+  parseJSON =
+    genericParseJSON defaultOptions
+    { fieldLabelModifier = map toLower . Prelude.drop 3
+    , constructorTagModifier = map toLower
+    }
+
+instance ToJSON Registration where
 
 data RegistrationError =
     PasswordsDontMatch
@@ -138,15 +142,6 @@ validateEmail bs =
     Left  errStr -> Left $ InvalidEmailAddress (cs bs) errStr
     Right email -> Right $ cs (toByteString email)
 
-validateName :: Text -> Either RegistrationError Text
-validateName n =
-  if strippedName /= "" then
-    Right strippedName
-  else
-    Left $ NameEmpty n
-
-  where strippedName = strip n
-
 encryptPassword :: Text -> IO Text
 encryptPassword plainPassword = do
   ep <- makePassword (cs plainPassword) 17
@@ -154,9 +149,8 @@ encryptPassword plainPassword = do
 
 validateRegistration :: Registration -> Either RegistrationError Registration
 validateRegistration reg@Registration{..} = do
-  emailE    <- validateEmail $ cs regEmail
-  passwordE <- validatePassword regPassword regPasswordConfirm
-  nameE     <- validateName regName
+  emailE    <- validateEmail $ cs email
+  passwordE <- validatePassword password passwordConfirm
 
   return reg
 
@@ -166,8 +160,8 @@ registrationToUser reg =
     Left err ->
       return $ Left err
     Right Registration{..} -> do
-      ep <- encryptPassword regPassword
-      return $ Right $ User regName regEmail ep
+      ep <- encryptPassword password
+      return $ Right $ User Nothing email ep
 
 
 -- allUserPosts :: UserId -> App [PublicPost]

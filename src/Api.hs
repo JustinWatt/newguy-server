@@ -24,6 +24,9 @@ type NewGuyAPI =
        UserAPI
   :<|> OrganizationAPI
 
+userApi :: Proxy UserAPI
+userApi = Proxy
+
 server :: ServerT NewGuyAPI App
 server = userServer
    :<|>  organizationServer

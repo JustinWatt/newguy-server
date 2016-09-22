@@ -8,7 +8,6 @@
 
 module Auth where
 
-import           Control.Monad                    ((<=<))
 import           Control.Monad.Reader             (ReaderT, runReaderT)
 import           Control.Monad.Reader.Class
 import           Config                           (App (..), Config (..))
@@ -27,7 +26,6 @@ import           Data.Aeson                       (FromJSON, ToJSON, (.=), toJSO
                                                   (.:), parseJSON, Value(Object), fromJSON,
                                                   Result(..))
 import           Web.JWT
-import           Data.Map as M
 import           Database.Persist.Postgresql      (fromSqlKey, toSqlKey)
 
 
@@ -46,6 +44,7 @@ data Credentials =
   deriving (Eq, Show, Generic)
 
 instance ToJSON Credentials where
+instance FromJSON Credentials where
 
 data Claims =
   Claims
@@ -93,7 +92,6 @@ decodeJWT secret authHeader  =
           throwError $ err403 { errBody = "Malformed Token" }
         Just claims' ->
           return claims'
-
 
 authHandler :: Config -> AuthHandler Request Claims
 authHandler config =

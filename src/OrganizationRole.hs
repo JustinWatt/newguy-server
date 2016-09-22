@@ -15,6 +15,6 @@ data OrganizationRole = Member | Admin
 
 derivePersistField "OrganizationRole"
 
-
 instance FromJSON OrganizationRole where
+instance ToJSON OrganizationRole where
 

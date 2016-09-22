@@ -33,7 +33,7 @@ import           Crypto.PasswordStore
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User json
-    name Text
+    name Text Maybe
     email Text
     UniqueEmail email
     password Text
