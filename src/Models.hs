@@ -109,7 +109,6 @@ runDevDb query =
    withPostgresqlPool devConnStr 3
     $ \ pool -> liftIO $ runSqlPool query pool
 
-
 data Login =
   Login
   { email     :: Text
@@ -127,8 +126,9 @@ data Registration =
   } deriving (Eq, Show, Generic)
 
 instance FromJSON Registration where
-
 instance ToJSON Registration where
+
+-- Organization
 
 data OrganizationInvitation =
   OrganizationInvitation
@@ -138,5 +138,26 @@ data OrganizationInvitation =
   }
   deriving (Eq, Show, Generic)
 
+
 instance FromJSON OrganizationInvitation where
 instance ToJSON OrganizationInvitation where
+
+-- Animal
+data NewAnimal =
+  NewAnimal
+  { name :: Text
+  , organizationID :: OrganizationId
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON NewAnimal where
+instance ToJSON NewAnimal where
+
+-- Yard
+data NewYard =
+  NewYard
+  { name :: Text
+  , organizationID :: OrganizationId
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON NewYard where
+instance ToJSON NewYard where

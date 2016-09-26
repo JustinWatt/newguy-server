@@ -9,33 +9,29 @@ import           Control.Monad.Reader.Class
 import           Control.Monad.IO.Class           (liftIO, MonadIO)
 import           Control.Monad.Except
 
-import Data.Aeson
-import Data.Aeson.TH
+import           Data.Int (Int64)
+import           Data.Maybe
 
-import Data.Int (Int64)
-import Data.Maybe
+import           Api.Organization
+import           Models
+import           Auth (Claims(..))
 
-import Api.Organization 
-import Models
-import Auth (Claims(..))
-
-import GHC.Generics (Generic)
-import Database.Esqueleto
+import           GHC.Generics (Generic)
+import           Database.Esqueleto
 import qualified Database.Persist.Postgresql as P
-import OrganizationRole
+import           OrganizationRole
 
 import Servant
 
 type AnimalAPI = "animals" :> (
        AuthProtect "jwt" :> Capture "animalID" AnimalId :> Get '[JSON] (Entity Animal)
-  :<|> AuthProtect "jwt" :> ReqBody '[JSON] Animal :> PostCreated '[JSON] Int64
+  :<|> AuthProtect "jwt" :> ReqBody '[JSON] NewAnimal :> PostCreated '[JSON] Int64
        )
 
 animalServer :: ServerT AnimalAPI App
 animalServer =
        getAnimalByID
   :<|> createAnimal
-
 
 getAnimalByID :: Claims -> AnimalId -> App (Entity Animal)
 getAnimalByID (Claims uID) aID = do
@@ -53,13 +49,16 @@ getAnimalByID (Claims uID) aID = do
     Just animal ->
       return animal
 
+mkAnimal :: NewAnimal -> Animal
+mkAnimal NewAnimal{..} =
+  Animal name organizationID Nothing
 
-createAnimal :: Claims -> Animal -> App Int64
-createAnimal (Claims uID) animal@Animal{..} = do
-  member <- isOrgMember' Member uID animalOrganizationId
+createAnimal :: Claims -> NewAnimal -> App Int64
+createAnimal (Claims uID) na@NewAnimal{..} = do
+  member <- isOrgMember Member uID organizationID
 
   if member then do
-    newAnimal <- runDb $ P.insert animal
+    newAnimal <- runDb $ P.insert $ mkAnimal na
     return $ fromSqlKey newAnimal
   else
     throwError err403
