@@ -87,6 +87,15 @@ isOrgMember oRole uID oID =
 isOrgAdmin :: MonadIO m => UserId -> OrganizationId -> ReaderT SqlBackend m (Maybe (Entity OrganizationUser))
 isOrgAdmin = isOrgMember Admin
 
+isOrgMember' :: OrganizationRole -> UserId -> OrganizationId -> App Bool
+isOrgMember' oRole uID oID = do
+  maybeOrgMember <- runDb $ P.selectFirst [ OrganizationUserUserId P.==. uID
+                                          , OrganizationUserOrganizationId P.==. oID
+                                          , OrganizationUserRole P.<=. oRole
+                                          , OrganizationUserAccepted P.==. True] []
+
+  return $ isJust maybeOrgMember
+
 mkOrganizationUser :: OrganizationInvitation -> OrganizationUser
 mkOrganizationUser (OrganizationInvitation uID oID role) =
   OrganizationUser uID oID role False
@@ -114,14 +123,3 @@ inviteUser (Claims uID) oID invite = do
     Right _ ->
       return NoContent
 
-data OrganizationInvitation =
-  OrganizationInvitation
-  { userID         :: UserId
-  , organizationID :: OrganizationId
-  , role           :: OrganizationRole
-  }
-  deriving (Eq, Show, Generic)
-
-instance FromJSON OrganizationInvitation where
-
-instance ToJSON OrganizationInvitation where

@@ -17,12 +17,14 @@ import           Models
 
 import           Api.User                    (UserAPI, userServer)
 import           Api.Organization            (OrganizationAPI, organizationServer)
+import           Api.Animal
 import           Auth
 
 
 type NewGuyAPI =
        UserAPI
   :<|> OrganizationAPI
+  :<|> AnimalAPI
 
 userApi :: Proxy UserAPI
 userApi = Proxy
@@ -30,6 +32,7 @@ userApi = Proxy
 server :: ServerT NewGuyAPI App
 server = userServer
    :<|>  organizationServer
+   :<|>  animalServer
 
 -- | This is the function we export to run our 'UserAPI'. Given
 -- a 'Config', we return a WAI 'Application' which any WAI compliant server

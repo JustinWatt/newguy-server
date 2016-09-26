@@ -7,6 +7,7 @@ module Api.Animal where
 import           Config                           (App (..))
 import           Control.Monad.Reader.Class
 import           Control.Monad.IO.Class           (liftIO, MonadIO)
+import           Control.Monad.Except
 
 import Data.Aeson
 import Data.Aeson.TH
@@ -14,14 +15,14 @@ import Data.Aeson.TH
 import Data.Int (Int64)
 import Data.Maybe
 
-import Api.Organization (isOrgMember)
+import Api.Organization 
 import Models
 import Auth (Claims(..))
 
 import GHC.Generics (Generic)
 import Database.Esqueleto
 import qualified Database.Persist.Postgresql as P
-import OrganizationRole 
+import OrganizationRole
 
 import Servant
 
@@ -55,23 +56,10 @@ getAnimalByID (Claims uID) aID = do
 
 createAnimal :: Claims -> Animal -> App Int64
 createAnimal (Claims uID) animal@Animal{..} = do
-   runDb $ do
-    maybeOrgMember <- isOrgMember Member uID animalOrganizationId
+  member <- isOrgMember' Member uID animalOrganizationId
 
-    case maybeOrgMember of
-      Nothing ->
-        return $ Left err403
-      Just _ -> do
-        newAnimal <- P.insertBy animal
-
-        case newAnimal of
-          Left err ->
-            return $ Left err403
-          Right a ->
-            return $ Right $ fromSqlKey a
-
-  case result of
-    Left err ->
-      throwError err
-    Right a ->
-      return a
+  if member then do
+    newAnimal <- runDb $ P.insert animal
+    return $ fromSqlKey newAnimal
+  else
+    throwError err403

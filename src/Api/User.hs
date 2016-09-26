@@ -28,7 +28,6 @@ import           Database.Persist.Postgresql      (Entity (..), fromSqlKey, inse
                                                   selectFirst, selectList, (==.))
 import           Network.Wai                      (Application)
 import           Servant
-
 import qualified Database.Esqueleto as E
 
 import           Config                           (App (..), Config (..))
@@ -74,60 +73,32 @@ singleUser str = do
          Just person ->
             return person
 
-data Login =
-  Login
-  { email     :: Text
-  , password  :: Text
-  } deriving (Show, Eq, Generic)
-
-instance FromJSON Login where
-  parseJSON =
-    genericParseJSON defaultOptions
-    { fieldLabelModifier = map toLower
-    , constructorTagModifier = map toLower
-    }
-
-instance ToJSON Login where
-
 login :: Login -> App Credentials
 login (Login e pw) = do
     maybeUser <- runDb (selectFirst [UserEmail ==. e] [])
 
     case maybeUser of
       Nothing ->
-        throwError err403
+        throwError err404
 
       Just (Entity uID (User _ _ phash)) ->
         if verifyPassword (cs pw) (cs phash) then do
           secret <- asks getSecret
           return $ createToken secret uID
         else
-         throwError err403
-
-
-
-data Registration =
-  Registration
-  { email    :: Text
-  , password :: Text
-  , passwordConfirm :: Text
-  } deriving (Eq, Show, Generic)
-
-
-instance FromJSON Registration where
-  parseJSON =
-    genericParseJSON defaultOptions
-    { fieldLabelModifier = map toLower . Prelude.drop 3
-    , constructorTagModifier = map toLower
-    }
-
-instance ToJSON Registration where
+         throwError err404
 
 data RegistrationError =
     PasswordsDontMatch
   | InvalidEmailAddress ByteString String
-  | NameEmpty Text
-  deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show RegistrationError where
+  show PasswordsDontMatch =
+    "Passwords do not match"
+
+  show (InvalidEmailAddress attempt reason) =
+    "Invalid email address: " ++ cs attempt
 
 validatePassword :: Text -> Text -> Either RegistrationError Text
 validatePassword pWord pWordConfirm =
