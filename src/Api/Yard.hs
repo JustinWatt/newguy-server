@@ -11,6 +11,7 @@ import           Control.Monad.Except
 
 import           Data.Int (Int64)
 import           Data.Maybe
+import           Data.Time
 
 import           Api.Organization
 import           Models
@@ -49,16 +50,17 @@ getYardByID (Claims uID) aID = do
     Just yard ->
       return yard
 
-mkYard :: NewYard -> Yard
-mkYard NewYard{..} =
-  Yard name organizationID
+mkYard :: NewYard -> UTCTime -> Yard
+mkYard NewYard{..} t =
+  Yard name organizationID t Nothing
 
 createYard :: Claims -> NewYard -> App Int64
 createYard (Claims uID) ny@NewYard{..} = do
   member <- isOrgMember Admin uID organizationID
 
   if member then do
-    newYard <- runDb $ P.insert $ mkYard ny
+    now <- liftIO getCurrentTime
+    newYard <- runDb $ P.insert $ mkYard ny now
     return $ fromSqlKey newYard
   else
     throwError err403

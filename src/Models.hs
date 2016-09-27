@@ -40,10 +40,14 @@ User json
     email Text
     UniqueEmail email
     password Text
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
     deriving Show
 
 Organization json
     name Text
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
     deriving Show
 
 OrganizationUser
@@ -51,46 +55,42 @@ OrganizationUser
     organizationId OrganizationId
     role  OrganizationRole
     accepted Bool
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
+    deriving Show
 
 Animal json
     name Text
     organizationId OrganizationId
     yardId         YardId Maybe
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
     deriving Show
 
 Yard json
     name Text
     organizationId OrganizationId
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
     deriving Show
 
 YardEvent json
     animalId AnimalId
     yardId   YardId
-    entryDTS UTCTime default=now()
-    exitDTS  UTCTime Maybe
+    entryDTS UTCTime Maybe sqptype=timestamptz default=now()
+    exitDTS  UTCTime Maybe sqltype=timestamptz
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
     deriving Show
 
 AnimalRelationship json
     animalIdA AnimalId
     animalIdB AnimalId
     strength  Int
+    created UTCTime sqltype=timestamptz default=now()
+    updated UTCTime Maybe sqltype=timestamptz
     deriving Show
 |]
-
--- data PublicPost =
---   PublicPost
---   { id :: PostId
---   , title :: String
---   , body  :: String
---   } deriving (Eq, Show, Generic)
-
--- postToPublicPost :: PostId -> Post -> PublicPost
--- postToPublicPost pid Post{..} =
---   PublicPost { title = postTitle, body = postBody, id = pid }
-
--- instance ToJSON PublicPost where
-
--- instance FromJSON PublicPost where
 
 doMigrations :: SqlPersistT IO ()
 doMigrations = runMigration migrateAll
@@ -135,8 +135,7 @@ data OrganizationInvitation =
   { userID         :: UserId
   , organizationID :: OrganizationId
   , role           :: OrganizationRole
-  }
-  deriving (Eq, Show, Generic)
+  } deriving (Eq, Show, Generic)
 
 
 instance FromJSON OrganizationInvitation where
@@ -161,3 +160,12 @@ data NewYard =
 
 instance FromJSON NewYard where
 instance ToJSON NewYard where
+
+-- Organization
+data NewOrganization =
+  NewOrganization
+  { name :: Text
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON NewOrganization where
+instance ToJSON NewOrganization where

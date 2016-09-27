@@ -23,6 +23,7 @@ import           Data.Int                         (Int64)
 
 import           Data.Text                        (Text, strip)
 import           Data.Char                        (toLower)
+import           Data.Time
 
 import           Database.Persist.Postgresql      (Entity (..), fromSqlKey, insert,
                                                   selectFirst, selectList, (==.))
@@ -81,7 +82,7 @@ login (Login e pw) = do
       Nothing ->
         throwError err404
 
-      Just (Entity uID (User _ _ phash)) ->
+      Just (Entity uID (User _ _ phash _ _)) ->
         if verifyPassword (cs pw) (cs phash) then do
           secret <- asks getSecret
           return $ createToken secret uID
@@ -132,7 +133,8 @@ registrationToUser reg =
       return $ Left err
     Right Registration{..} -> do
       ep <- encryptPassword password
-      return $ Right $ User Nothing email ep
+      now <- getCurrentTime
+      return $ Right $ User Nothing email ep now Nothing
 
 
 -- allUserPosts :: UserId -> App [PublicPost]

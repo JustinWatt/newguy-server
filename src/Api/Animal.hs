@@ -11,6 +11,7 @@ import           Control.Monad.Except
 
 import           Data.Int (Int64)
 import           Data.Maybe
+import           Data.Time
 
 import           Api.Organization
 import           Models
@@ -49,16 +50,17 @@ getAnimalByID (Claims uID) aID = do
     Just animal ->
       return animal
 
-mkAnimal :: NewAnimal -> Animal
-mkAnimal NewAnimal{..} =
-  Animal name organizationID Nothing
+mkAnimal :: NewAnimal -> UTCTime -> Animal
+mkAnimal NewAnimal{..} t =
+  Animal name organizationID Nothing t Nothing
 
 createAnimal :: Claims -> NewAnimal -> App Int64
 createAnimal (Claims uID) na@NewAnimal{..} = do
   member <- isOrgMember Member uID organizationID
 
   if member then do
-    newAnimal <- runDb $ P.insert $ mkAnimal na
+    now <- liftIO getCurrentTime
+    newAnimal <- runDb $ P.insert $ mkAnimal na now
     return $ fromSqlKey newAnimal
   else
     throwError err403

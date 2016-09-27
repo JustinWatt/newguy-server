@@ -52,6 +52,7 @@ library
       , Api.User
       , Api.Organization
       , Api.Animal
+      , Api.Yard
       , Auth
       , OrganizationRole
     build-depends: 
